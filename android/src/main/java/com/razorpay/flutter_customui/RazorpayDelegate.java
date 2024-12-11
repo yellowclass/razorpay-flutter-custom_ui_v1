@@ -316,7 +316,7 @@ public class RazorpayDelegate implements ActivityResultListener  {
     }
 
     public void handlePermissionResult(int requestCode, String[] permissions, int[] grantResults) {
-        upiTurbo.handlePermissionResult(requestCode, permissions, grantResults);
+//        upiTurbo.handlePermissionResult(requestCode, permissions, grantResults);
     }
 
     public  boolean isTurboPluginAvailable(Result result, EventChannel.EventSink eventSink) {
