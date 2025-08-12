@@ -43,6 +43,7 @@ public class RazorpayDelegate implements ActivityResultListener  {
     private static final int UNKNOWN_ERROR = 100;
 
     private UpiTurbo upiTurbo;
+    private boolean hasSubmitted = false;
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public RazorpayDelegate(Activity activity) {
@@ -92,19 +93,27 @@ public class RazorpayDelegate implements ActivityResultListener  {
 
     void getPaymentMethods(final Result result) {
         pendingResult = result;
+        hasSubmitted = false; // reset for this call
+
         if (razorpay == null) {
             init(this.key, result);
         }
         razorpay.getPaymentMethods(new PaymentMethodsCallback() {
             @Override
             public void onPaymentMethodsReceived(String s) {
-                HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
-                pendingResult.success(hMapData);
+                if(!hasSubmitted) {
+                    hasSubmitted = true;
+                    HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
+                    pendingResult.success(hMapData);
+                }
             }
 
             @Override
             public void onError(String s) {
-                pendingResult.error(s, "", null);
+                if(!hasSubmitted) {
+                    hasSubmitted = true;
+                    pendingResult.error(s, "", null);
+                }
             }
         });
     }
