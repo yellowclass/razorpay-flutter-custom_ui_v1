@@ -101,15 +101,13 @@ public class RazorpayDelegate implements ActivityResultListener  {
                     HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
                     result.success(hMapData);
                 } catch (Exception e) {
+                    result.error(s, "", null);
                 }
             }
 
             @Override
             public void onError(String s) {
-                try {
-                    result.error(s, "", null);
-                } catch (Exception e) {
-                }
+                result.error(s, "", null);
             }
         });
     }
