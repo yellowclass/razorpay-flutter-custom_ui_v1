@@ -20,6 +20,7 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.ActivityResultListener;
@@ -43,7 +44,6 @@ public class RazorpayDelegate implements ActivityResultListener  {
     private static final int UNKNOWN_ERROR = 100;
 
     private UpiTurbo upiTurbo;
-    private boolean hasSubmitted = false;
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public RazorpayDelegate(Activity activity) {
@@ -93,7 +93,7 @@ public class RazorpayDelegate implements ActivityResultListener  {
 
     void getPaymentMethods(final Result result) {
         pendingResult = result;
-        hasSubmitted = false; // reset for this call
+        final AtomicBoolean replied = new AtomicBoolean(false);
 
         if (razorpay == null) {
             init(this.key, result);
@@ -101,8 +101,7 @@ public class RazorpayDelegate implements ActivityResultListener  {
         razorpay.getPaymentMethods(new PaymentMethodsCallback() {
             @Override
             public void onPaymentMethodsReceived(String s) {
-                if(!hasSubmitted) {
-                    hasSubmitted = true;
+                if (replied.compareAndSet(false, true)) {
                     HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
                     pendingResult.success(hMapData);
                 }
@@ -110,8 +109,7 @@ public class RazorpayDelegate implements ActivityResultListener  {
 
             @Override
             public void onError(String s) {
-                if(!hasSubmitted) {
-                    hasSubmitted = true;
+                if (replied.compareAndSet(false, true)) {
                     pendingResult.error(s, "", null);
                 }
             }
