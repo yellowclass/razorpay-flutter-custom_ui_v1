@@ -20,7 +20,6 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.ActivityResultListener;
@@ -44,7 +43,6 @@ public class RazorpayDelegate implements ActivityResultListener  {
     private static final int UNKNOWN_ERROR = 100;
 
     private UpiTurbo upiTurbo;
-    private AtomicReference<Result> currentPaymentMethodsResult = new AtomicReference<>();
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public RazorpayDelegate(Activity activity) {
@@ -93,36 +91,24 @@ public class RazorpayDelegate implements ActivityResultListener  {
     }
 
     void getPaymentMethods(final Result result) {
-        // Atomically set the current result, invalidating any previous one
-        currentPaymentMethodsResult.set(result);
-        
         if (razorpay == null) {
             init(this.key, result);
         }
         razorpay.getPaymentMethods(new PaymentMethodsCallback() {
             @Override
             public void onPaymentMethodsReceived(String s) {
-                // Only respond if this result is still the current one
-                Result currentResult = currentPaymentMethodsResult.getAndSet(null);
-                if (currentResult == result) {
-                    HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
-                    currentResult.success(hMapData);
-                }
+                HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
+                result.success(hMapData);
             }
 
             @Override
             public void onError(String s) {
-                // Only respond if this result is still the current one
-                Result currentResult = currentPaymentMethodsResult.getAndSet(null);
-                if (currentResult == result) {
-                    currentResult.error(s, "", null);
-                }
+                result.error(s, "", null);
             }
         });
     }
 
     void getAppsWhichSupportUpi(Result result) {
-        this.pendingResult = result;
         Razorpay.getAppsWhichSupportUpi(activity, new RzpUpiSupportedAppsCallback() {
             @Override
             public void onReceiveUpiSupportedApps(List<ApplicationDetails> list) {
@@ -130,22 +116,21 @@ public class RazorpayDelegate implements ActivityResultListener  {
                 for (int i = 0; i < list.size(); i++) {
                     hMap.put(list.get(i).getPackageName(), list.get(i).getAppName());
                 }
-                pendingResult.success(hMap);
+                result.success(hMap);
             }
         });
     }
 
     void getSubscriptionAmount(String value, Result result) {
-        this.pendingResult = result;
         razorpay.getSubscriptionAmount(value, new SubscriptionAmountCallback() {
             @Override
             public void onSubscriptionAmountReceived(long l) {
-                pendingResult.success(l);
+                result.success(l);
             }
 
             @Override
             public void onError(String s) {
-                pendingResult.error(s, "", null);
+                result.error(s, "", null);
             }
         });
     }
@@ -161,17 +146,16 @@ public class RazorpayDelegate implements ActivityResultListener  {
     }
 
     void isValidVpa(String value, Result result) {
-        this.pendingResult = result;
         razorpay.isValidVpa(value, new ValidateVpaCallback() {
             @Override
             public void onResponse(JSONObject jsonObject) {
                 HashMap<String, Object> hMapData = new Gson().fromJson(jsonObject.toString(), HashMap.class);
-                pendingResult.success(hMapData);
+                result.success(hMapData);
             }
 
             @Override
             public void onFailure() {
-                pendingResult.error("error", "", null);
+                result.error("error", "", null);
             }
         });
     }
