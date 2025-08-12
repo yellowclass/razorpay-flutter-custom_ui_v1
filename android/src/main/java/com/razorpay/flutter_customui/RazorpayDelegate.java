@@ -91,6 +91,7 @@ public class RazorpayDelegate implements ActivityResultListener  {
     }
 
     void getPaymentMethods(final Result result) {
+        final Result localResult = result;
         if (razorpay == null) {
             init(this.key, result);
         }
@@ -98,17 +99,18 @@ public class RazorpayDelegate implements ActivityResultListener  {
             @Override
             public void onPaymentMethodsReceived(String s) {
                 HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
-                result.success(hMapData);
+                localResult.success(hMapData);
             }
 
             @Override
             public void onError(String s) {
-                result.error(s, "", null);
+                localResult.error(s, "", null);
             }
         });
     }
 
     void getAppsWhichSupportUpi(Result result) {
+        this.pendingResult = result;
         Razorpay.getAppsWhichSupportUpi(activity, new RzpUpiSupportedAppsCallback() {
             @Override
             public void onReceiveUpiSupportedApps(List<ApplicationDetails> list) {
@@ -116,21 +118,22 @@ public class RazorpayDelegate implements ActivityResultListener  {
                 for (int i = 0; i < list.size(); i++) {
                     hMap.put(list.get(i).getPackageName(), list.get(i).getAppName());
                 }
-                result.success(hMap);
+                pendingResult.success(hMap);
             }
         });
     }
 
     void getSubscriptionAmount(String value, Result result) {
+        this.pendingResult = result;
         razorpay.getSubscriptionAmount(value, new SubscriptionAmountCallback() {
             @Override
             public void onSubscriptionAmountReceived(long l) {
-                result.success(l);
+                pendingResult.success(l);
             }
 
             @Override
             public void onError(String s) {
-                result.error(s, "", null);
+                pendingResult.error(s, "", null);
             }
         });
     }
@@ -146,16 +149,17 @@ public class RazorpayDelegate implements ActivityResultListener  {
     }
 
     void isValidVpa(String value, Result result) {
+        this.pendingResult = result;
         razorpay.isValidVpa(value, new ValidateVpaCallback() {
             @Override
             public void onResponse(JSONObject jsonObject) {
                 HashMap<String, Object> hMapData = new Gson().fromJson(jsonObject.toString(), HashMap.class);
-                result.success(hMapData);
+                pendingResult.success(hMapData);
             }
 
             @Override
             public void onFailure() {
-                result.error("error", "", null);
+                pendingResult.error("error", "", null);
             }
         });
     }
