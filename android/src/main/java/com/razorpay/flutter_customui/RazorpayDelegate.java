@@ -91,20 +91,25 @@ public class RazorpayDelegate implements ActivityResultListener  {
     }
 
     void getPaymentMethods(final Result result) {
-        final Result localResult = result;
         if (razorpay == null) {
             init(this.key, result);
         }
         razorpay.getPaymentMethods(new PaymentMethodsCallback() {
             @Override
             public void onPaymentMethodsReceived(String s) {
-                HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
-                localResult.success(hMapData);
+                try {
+                    HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
+                    result.success(hMapData);
+                } catch (Exception e) {
+                }
             }
 
             @Override
             public void onError(String s) {
-                localResult.error(s, "", null);
+                try {
+                    result.error(s, "", null);
+                } catch (Exception e) {
+                }
             }
         });
     }
