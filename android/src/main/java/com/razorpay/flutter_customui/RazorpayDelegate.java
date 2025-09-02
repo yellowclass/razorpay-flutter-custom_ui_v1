@@ -97,17 +97,19 @@ public class RazorpayDelegate implements ActivityResultListener  {
         razorpay.getPaymentMethods(new PaymentMethodsCallback() {
             @Override
             public void onPaymentMethodsReceived(String s) {
-                try {
+                if (pendingResult != null) {
                     HashMap<String, Object> hMapData = new Gson().fromJson(s, HashMap.class);
-                    result.success(hMapData);
-                } catch (Exception e) {
-                    result.error(s, "", null);
+                    pendingResult.success(hMapData);
+                    pendingResult = null;
                 }
             }
 
             @Override
             public void onError(String s) {
-                result.error(s, "", null);
+                if (pendingResult != null) {
+                    pendingResult.error(s, "", null);
+                    pendingResult = null;
+                }
             }
         });
     }
@@ -117,11 +119,14 @@ public class RazorpayDelegate implements ActivityResultListener  {
         Razorpay.getAppsWhichSupportUpi(activity, new RzpUpiSupportedAppsCallback() {
             @Override
             public void onReceiveUpiSupportedApps(List<ApplicationDetails> list) {
-                HashMap<Object, Object> hMap = new HashMap<>();
-                for (int i = 0; i < list.size(); i++) {
-                    hMap.put(list.get(i).getPackageName(), list.get(i).getAppName());
+                if (pendingResult != null) {
+                    HashMap<Object, Object> hMap = new HashMap<>();
+                    for (int i=0;i<list.size();i++) {
+                        hMap.put(list.get(i).getPackageName(),list.get(i).getAppName());
+                    }
+                    pendingResult.success(hMap);
+                    pendingResult = null;
                 }
-                pendingResult.success(hMap);
             }
         });
     }
@@ -131,24 +136,36 @@ public class RazorpayDelegate implements ActivityResultListener  {
         razorpay.getSubscriptionAmount(value, new SubscriptionAmountCallback() {
             @Override
             public void onSubscriptionAmountReceived(long l) {
-                pendingResult.success(l);
+                if (pendingResult != null) {
+                    pendingResult.success(l);
+                    pendingResult = null;
+                }
             }
 
             @Override
             public void onError(String s) {
-                pendingResult.error(s, "", null);
+                if (pendingResult != null) {
+                    pendingResult.error(s, "", null);
+                    pendingResult = null;
+                }
             }
         });
     }
 
     void getWalletLogoUrl(String value, Result result) {
         this.pendingResult = result;
-        pendingResult.success(razorpay.getWalletLogoUrl(value));
+        if (pendingResult != null) {
+            pendingResult.success(razorpay.getWalletLogoUrl(value));
+            pendingResult = null;
+        }
     }
 
     void isValidCardNumber(String value, Result result) {
         this.pendingResult = result;
-        pendingResult.success(razorpay.isValidCardNumber(value));
+        if (pendingResult != null) {
+            pendingResult.success(razorpay.isValidCardNumber(value));
+            pendingResult = null;
+        }
     }
 
     void isValidVpa(String value, Result result) {
@@ -156,13 +173,19 @@ public class RazorpayDelegate implements ActivityResultListener  {
         razorpay.isValidVpa(value, new ValidateVpaCallback() {
             @Override
             public void onResponse(JSONObject jsonObject) {
-                HashMap<String, Object> hMapData = new Gson().fromJson(jsonObject.toString(), HashMap.class);
-                pendingResult.success(hMapData);
+                if (pendingResult != null) {
+                    HashMap<String, Object> hMapData = new Gson().fromJson(jsonObject.toString(), HashMap.class);
+                    pendingResult.success(hMapData);
+                    pendingResult = null;
+                }
             }
 
             @Override
             public void onFailure() {
-                pendingResult.error("error", "", null);
+                if (pendingResult != null) {
+                    pendingResult.error("error", "", null);
+                    pendingResult = null;
+                }
             }
         });
     }
@@ -170,6 +193,7 @@ public class RazorpayDelegate implements ActivityResultListener  {
     private void sendReply(HashMap<Object, Object> data) {
         if (pendingResult != null) {
             pendingResult.success(data);
+            pendingResult = null; // Clear the result after sending to prevent double replies
             pendingReply = null;
         } else {
             pendingReply = data;
@@ -177,16 +201,30 @@ public class RazorpayDelegate implements ActivityResultListener  {
     }
 
     public void resync(Result result) {
-        result.success(pendingReply);
-        pendingReply = null;
+        if (pendingReply != null) {
+            result.success(pendingReply);
+            pendingReply = null;
+        } else {
+            result.success(null);
+        }
     }
 
     public void setPaymentID(String value, Result result) {
         this.pendingResult = result;
         razorpay.setPaymentID(value);
+        // Send success response after setting payment ID
+        if (pendingResult != null) {
+            pendingResult.success(null);
+            pendingResult = null;
+        }
     }
 
     public void onPaymentSuccess(String razorpayPaymentId, JSONObject paymentData) {
+        if (pendingResult == null) {
+            // Reply already sent or no pending result
+            return;
+        }
+        
         try {
             HashMap<Object, Object> reply = new HashMap<>();
             reply.put("type", CODE_PAYMENT_SUCCESS);
@@ -205,12 +243,17 @@ public class RazorpayDelegate implements ActivityResultListener  {
             reply.put("data", data);
             sendReply(reply);
         } catch (JSONException e) {
-
+            // Handle JSON exception
         }
     }
 
 
     public void onPaymentError(int code, String description, JSONObject paymentDataJson) {
+        if (pendingResult == null) {
+            // Reply already sent or no pending result
+            return;
+        }
+        
         HashMap<Object, Object> reply = new HashMap<>();
         reply.put("type", CODE_PAYMENT_ERROR);
 
